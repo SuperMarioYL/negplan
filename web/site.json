@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "name": "NegPlan",
+  "github": "https://github.com/SuperMarioYL/negplan",
+  "host": "negplan.lei6393.com",
+  "lang": { "primary": "en", "toggle": true },
+  "accent": ["#2f8f7e"],
+  "hero": {
+    "eyebrow": {
+      "zh": "写代码之前 · 先说不做 · 纯 markdown",
+      "en": "Before code · Say no first · Plain markdown"
+    },
+    "headline": {
+      "zh": "让你的编码 agent\n先说不做哪些",
+      "en": "Make your coding agent\nsay what it won't do first"
+    },
+    "sub": {
+      "zh": "计划先以一份「不予实现」清单开场——agent 把要做和不做的事都列出来，每条带一句理由，再把否决项摆出来等你拍板。纯 markdown，不锁平台。",
+      "en": "The plan opens as a will-not-implement list — your agent lays out what it will and won't do, each with a one-line reason, then surfaces the vetoes for your call. Plain markdown, no platform lock-in."
+    },
+    "cta": { "zh": "开始使用", "en": "Get started" },
+    "ctaGithub": { "zh": "在 GitHub 查看", "en": "View on GitHub" }
+  },
+  "advantages": [
+    {
+      "title": {
+        "zh": "先开一份「不予实现」清单",
+        "en": "It opens with a will-not-implement list"
+      },
+      "body": {
+        "zh": "你让 agent 做功能 X，它默认还会搭上投机的基础设施、顺手的重构和「既然都到这了」的额外特性——而且代码还能编译，事后删起来很费劲。NegPlan 让它先列出要做和不做的事，每条带一句理由，把范围之争挪到写代码之前。",
+        "en": "Ask an agent for feature X and it ships X plus speculative infrastructure, adjacent refactors, and \"while I'm here\" extras — and the code compiles, so pruning it is expensive. NegPlan makes it list what it will and won't do first, each with a one-line reason, moving the scope fight ahead of the code."
+      },
+      "chips": [
+        "› will + won't lists",
+        "› each with a reason"
+      ]
+    },
+    {
+      "title": {
+        "zh": "在写代码之前，你先拍板",
+        "en": "You decide, before a line is written"
+      },
+      "body": {
+        "zh": "agent 把否决项逐条摆出来，问你留还是砍——你答完之前它不动手写代码。只有你放行的项才进入要做清单，范围由你说了算，不是 agent 拍脑袋。",
+        "en": "The agent surfaces every veto, item by item, and asks keep or cut — and won't start coding until you've answered. Only what you allow moves into the plan. Scope is your call, not the agent's hunch."
+      },
+      "chips": [
+        "› vetoes surfaced one by one",
+        "› you override, then it codes"
+      ]
+    },
+    {
+      "title": {
+        "zh": "每一处改动，都对得上清单",
+        "en": "Every change ties back to the plan"
+      },
+      "body": {
+        "zh": "当 agent 提出改动，每一处都要指明它满足清单里的哪一条。对不上号的改动被当作范围蔓延拦下、摆给你看，而不是默默写进去——代码更少，且都切题。",
+        "en": "When the agent proposes a change, each one must point to a planned item it satisfies. Anything that doesn't match is held as scope creep and shown to you, not quietly written in — less code, and all of it on-topic."
+      },
+      "chips": [
+        "› each change cites the plan",
+        "› extras surfaced, not written"
+      ]
+    },
+    {
+      "title": {
+        "zh": "纯 markdown，不锁平台",
+        "en": "Plain markdown, no platform lock-in"
+      },
+      "body": {
+        "zh": "整份计划就是一个 markdown 文件——你能读、能改、能存档，换一个 agent 接着用。没有常驻服务、没有云、没有账号、没有遥测。MIT 开源，永久免费。",
+        "en": "The whole plan is one markdown file — you can read, edit, and archive it, and carry it to another agent. No daemon, no cloud, no account, no telemetry. MIT and free, for good."
+      },
+      "chips": [
+        "› one markdown file",
+        "› MIT / free / no telemetry"
+      ]
+    }
+  ],
+  "scene": {
+    "kind": "particle-field"
+  },
+  "cta": {
+    "headline": {
+      "zh": "别再手动删 agent 写的投机代码了",
+      "en": "Stop pruning your agent's speculative code by hand"
+    },
+    "sub": {
+      "zh": "让它先声明一份「不予实现」清单，把范围之争挪到写代码之前。开源、MIT、无付费墙、无遥测。",
+      "en": "Make it declare a will-not-implement list first, and move the scope fight ahead of the code. Open source, MIT, no paywall, no telemetry."
+    },
+    "button": { "zh": "在 GitHub 上开始", "en": "Get started on GitHub" }
+  },
+  "footer": {
+    "tag": {
+      "zh": "一份让编码 agent 先说不做的「不予实现」清单",
+      "en": "The will-not-implement list that makes your coding agent say no first"
+    }
+  }
+}
