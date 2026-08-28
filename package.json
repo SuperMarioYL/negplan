@@ -1,0 +1,47 @@
+{
+  "name": "negplan",
+  "version": "0.1.0",
+  "description": "A will-not-implement ledger that gates coding-agent scope creep for solo devs.",
+  "type": "module",
+  "main": "dist/src/ledger.js",
+  "bin": {
+    "negplan": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "schemas",
+    "templates",
+    "examples",
+    "SKILL.md",
+    "VERSION"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/cli.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc && node --test \"dist/test/**/*.test.js\""
+  },
+  "keywords": [
+    "coding-agent",
+    "scope-creep",
+    "planning",
+    "claude-code",
+    "skill",
+    "will-not-implement",
+    "ledger",
+    "agent-governance"
+  ],
+  "author": "SuperMarioYL",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

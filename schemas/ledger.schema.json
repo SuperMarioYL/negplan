@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/SuperMarioYL/negplan/blob/main/schemas/ledger.schema.json",
+  "title": "NegPlan will-not-implement ledger",
+  "description": "The portable markdown ledger (.negplan.md) parsed into JSON. The plan opens as a will-not-implement list; every diff hunk must cite a will_implement entry it satisfies or it is held at the gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task", "status", "will_implement", "will_not_implement", "gates"],
+  "properties": {
+    "task": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-line description of the build request the agent is working on."
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent that drafted the ledger, e.g. claude-code."
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp the ledger was created."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["drafting", "negotiating", "gating", "done"],
+      "description": "drafting = ledger open; negotiating = human reviewing vetoes; gating = diffs being checked; done = closed."
+    },
+    "will_implement": {
+      "type": "array",
+      "description": "Scope the agent is allowed to write code for. Each diff hunk must cite one entry by id.",
+      "items": { "$ref": "#/definitions/willImplementEntry" }
+    },
+    "will_not_implement": {
+      "type": "array",
+      "description": "Scope the agent considered and refuses to do, each with a one-line justification. Human may override a veto; overridden items move into will_implement.",
+      "items": { "$ref": "#/definitions/willNotImplementEntry" }
+    },
+    "gates": {
+      "type": "array",
+      "description": "Audit log of every diff hunk the gate saw and its verdict.",
+      "items": { "$ref": "#/definitions/gateEntry" }
+    }
+  },
+  "definitions": {
+    "willImplementEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "summary", "rationale"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^w[0-9]+$", "description": "Stable id, w-prefixed, e.g. w1." },
+        "summary": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1, "description": "Why this is in scope." }
+      }
+    },
+    "willNotImplementEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "summary", "rationale", "overridden"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^n[0-9]+$", "description": "Stable id, n-prefixed, e.g. n1." },
+        "summary": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1, "description": "Why this is out of scope." },
+        "overridden": { "type": "boolean", "description": "True once the human vetoed the agent's veto." }
+      }
+    },
+    "gateEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["change_id", "file", "hunk", "entry_id", "verdict", "human_override"],
+      "properties": {
+        "change_id": { "type": "string", "pattern": "^g[0-9]+$", "description": "Stable id, g-prefixed, e.g. g1." },
+        "file": { "type": "string", "minLength": 1, "description": "File path the hunk touches." },
+        "hunk": { "type": "string", "minLength": 1, "description": "The @@ hunk header from the unified diff." },
+        "entry_id": {
+          "description": "The will_implement entry id this hunk claims to satisfy, or null when none matched (creep).",
+          "oneOf": [
+            { "type": "string", "pattern": "^w[0-9]+$" },
+            { "type": "null" }
+          ]
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["allowed", "creep", "overridden"],
+          "description": "allowed = matched an entry; creep = no entry, held; overridden = human forced a creep hunk through."
+        },
+        "human_override": {
+          "description": "True if a human forced this hunk's verdict; null when the gate decided alone.",
+          "oneOf": [{ "type": "boolean" }, { "type": "null" }]
+        }
+      }
+    }
+  }
+}
