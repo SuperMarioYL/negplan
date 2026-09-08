@@ -1,131 +1,139 @@
-<div align="right"><sub><b>EN</b>&nbsp;&nbsp;⇄&nbsp;&nbsp;<a href="./README.zh-CN.md">中文</a></sub></div>
+[简体中文](./README.zh-CN.md) · [Website](https://negplan.lei6393.com) · [GitHub](https://github.com/SuperMarioYL/negplan)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/hero-light.svg">
-  <img src="./assets/hero-light.svg" width="880" alt="NegPlan — the will-not-implement ledger for coding agents">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/hero-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/hero-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/hero-dark.svg">
+  <img src="./assets/presentation/hero-light.svg" width="960" alt="Hero diagram">
 </picture>
 
-<p align="center"><sub>NegPlan is the will-not-implement ledger that gates coding-agent scope creep for solo devs.</sub></p>
+# negplan
 
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"></a>
-  <a href="https://github.com/SuperMarioYL/negplan/releases"><img src="https://img.shields.io/github/v/release/SuperMarioYL/negplan" alt="release"></a>
-  <a href="https://github.com/SuperMarioYL/negplan/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SuperMarioYL/negplan/ci.yml?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/node-%3E%3D22-339933" alt="node">
-</p>
+**Write down the work you are deliberately leaving out.**
 
-**Stop pruning your coding agent's speculative code by hand — make it declare a will-not-implement list first, then earn every line through a gate you can override.**
+negplan gives a coding task a portable Markdown ledger with allowed work, excluded work and the reasons for both. The current CLI creates and validates that document.
 
-<h2><img src="https://api.iconify.design/tabler:topology-star-3.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Architecture</h2>
+## Why use it
+
+An exclusion is easier to discuss when it has an ID and rationale beside the requested work. Keeping the agreement in a file makes it available to a person or any agent that can read Markdown.
+
+- **Make exclusions explicit** — Each excluded item keeps its rationale.
+- **Keep a portable file** — Markdown can travel with the project.
+- **Check the format** — The validator reports fields that violate the schema.
+
+## Architecture
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/atlas-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/atlas-light.svg">
-  <img src="./assets/atlas-light.svg" width="880" alt="Architecture: the agent drafts the will-not-implement ledger, the gate checks each diff hunk against it, verdicts land in the gates audit log">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/architecture-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-dark.svg">
+  <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
 </picture>
 
-The plan opens as a **will-not-implement** ledger (`.negplan.md`). The agent drafts both lists — what it *will* do and what it *refuses* to do — before writing code. Every diff hunk must then cite a `will_implement` entry; a hunk with no entry is held as scope creep until you override it. Two components, one process, no server: a portable [Claude Code skill](./SKILL.md) and a tiny Node CLI that reads and writes the same markdown file.
+init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate and render are milestone placeholders.
 
-## Table of Contents
+| Component | Responsibility |
+| --- | --- |
+| `Markdown template` | templates/ledger.template.md |
+| `Ledger parser` | src/ledger.ts |
+| `Schema validation` | schemas/ledger.schema.json |
+| `Canonical serialization` | serializeLedger |
 
-- [Why this exists](#why-this-exists)
-- [Quickstart](#quickstart)
-- [Usage](#usage)
-- [Demo](#demo)
-- [Roadmap](#roadmap)
-- [License](#license)
+## Install and quickstart
 
-<h2><img src="https://api.iconify.design/tabler:bulb.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Why this exists</h2>
-
-Coding agents default to maximal scope: asked for feature X, they ship X plus speculative infrastructure, adjacent refactors, and "while I'm here" features — and today the code *compiles*, so pruning it is expensive. NegPlan moves the scope fight **upstream of code generation**: the plan opens as a machine-checkable will-not-implement ledger, and each diff hunk must cite an entry it satisfies or it is held at the gate. The ledger is plain markdown, so it survives across agents — not a platform API you get locked into.
-
-<h2><img src="https://api.iconify.design/tabler:rocket.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Quickstart</h2>
-
-Three commands from cold clone to a validated ledger:
+Use the runtime version declared in the repository manifest. The source installation below makes the included example reproducible.
 
 ```bash
-git clone https://github.com/SuperMarioYL/negplan.git && cd negplan && npm install && npm run build
-node dist/src/cli.js init --task "Add a login page"   # writes .negplan.md (the will-not-implement ledger)
-node dist/src/cli.js validate                          # → "negplan: .negplan.md is valid."
+git clone https://github.com/SuperMarioYL/negplan.git
+cd negplan
+npm ci
+npm run build
 ```
 
-Once published to npm, the first line becomes `npx negplan init --task "Add a login page"`.
-
-<details><summary>sample output</summary>
-
-```
-$ node dist/src/cli.js init --task "Add a login page"
-negplan: wrote .negplan.md (task: "Add a login page")
-next: open it, then ask your agent to fill the will_implement + will_not_implement lists.
-
-$ cat .negplan.md
----
-task: "Add a login page"
-agent: claude-code
-created_at: "2026-08-28T10:00:00Z"
-status: drafting
----
-
-## will_implement
-| id | summary | rationale |
-| --- | --- | --- |
-
-## will_not_implement
-| id | summary | rationale | overridden |
-| --- | --- | --- | --- |
-
-## gates
-| change_id | file | hunk | entry_id | verdict | human_override |
-| --- | --- | --- | --- | --- | --- |
-
-$ node dist/src/cli.js validate
-negplan: .negplan.md is valid.
-```
-</details>
-
-Then ask your agent: *"Build feature X using negplan."* The [skill](./SKILL.md) makes it fill both lists, surface the vetoes for a y/n override, and only then propose diffs whose hunks each cite an entry.
-
-<h2><img src="https://api.iconify.design/tabler:terminal-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Usage</h2>
+Node.js 22+; parse the complete example ledger, round-trip it and reject an invalid lifecycle status.
 
 ```bash
-negplan init    [--task "<text>"] [--output <path>] [--force] [--agent <name>]   # write a fresh ledger
-negplan validate [--file <path>]                                                 # validate against the ledger schema
-negplan gate    [<file>]        # (m2) gate a diff's hunks against allowed entries
-negplan render  [<file>]        # (m3) print a veto/allow summary + override panel
+node examples/presentation-demo.mjs
 ```
 
-Draft a ledger for a real task:
+## Recorded demo
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/process-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/process-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/process-dark.svg">
+  <img src="./assets/presentation/process-light.svg" width="960" alt="Process diagram">
+</picture>
+
+The example has two allowed and three excluded items; its round trip validates, while status=unexpected fails.
+
+```text
+{
+  "task": "Build the login page",
+  "will_implement": 2,
+  "will_not_implement": 3,
+  "validation": {
+    "valid": true,
+    "errors": []
+  }
+}
+roundtrip valid: true
+{
+  "valid": false,
+  "errors": [
+    ".status: must be one of drafting, negotiating, gating, done"
+  ]
+}
+```
+
+The complete command and output are recorded in [docs/demo-results.json](./docs/demo-results.json). Inputs and reproduction code are included in the repository.
+
+![Existing terminal recording](./assets/demo.gif)
+
+The existing recording is retained for context; the text example above documents the reproducible scenario.
+
+## Usage
+
+Run these commands from the repository root after installation. Replace paths for your own data.
 
 ```bash
-negplan init --task "Add a login page" --output .negplan.md
+node dist/src/cli.js init --task "Add CSV export" --output .negplan.md
+# Fill the allowed/excluded entries in .negplan.md, then:
+node dist/src/cli.js validate --file .negplan.md
+node dist/src/cli.js validate --file examples/example-ledger.md
 ```
 
-Validate a hand-written or agent-filled ledger (exits non-zero on failure):
+## Configuration
 
-```bash
-negplan validate -f examples/example-ledger.md
-```
+A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates defines change_id, file, hunk, entry_id, verdict and human_override for future enforcement records. init --force overwrites an existing file; omit it to preserve an existing agreement.
 
-See a populated, schema-valid ledger: [`examples/example-ledger.md`](./examples/example-ledger.md). The schema that backs `validate` lives at [`schemas/ledger.schema.json`](./schemas/ledger.schema.json), and the blank ledger `init` writes from is at [`templates/ledger.template.md`](./templates/ledger.template.md).
+## Integrations and responsibilities
 
-<h2><img src="https://api.iconify.design/tabler:photo.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Demo</h2>
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/integrations-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-dark.svg">
+  <img src="./assets/presentation/integrations-light.svg" width="960" alt="Integrations diagram">
+</picture>
 
-The m1 happy path — `init` writes a fresh will-not-implement ledger, then `validate` goes green:
+Choose the input and output route that matches your workflow. The local example below exercises the stated subset.
 
-![demo](assets/demo.gif)
+| Route | Implemented role |
+| --- | --- |
+| Markdown + YAML | Task and scope decisions |
+| init CLI | Create a starting document |
+| validate CLI | Document-shape check |
+| TypeScript functions | Parse and serialize ledgers |
+| Agent-readable file | Manual scope agreement |
 
-<h2><img src="https://api.iconify.design/tabler:map-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Roadmap</h2>
+## Limits and next steps
 
-- [x] **m1 — define the ledger.** `negplan init` + `negplan validate`, the [`ledger.schema.json`](./schemas/ledger.schema.json), and the [Claude Code skill](./SKILL.md) that drafts the ledger on any build request.
-- [ ] **m2 — enforce the gate.** `negplan gate` maps each diff hunk to a `will_implement` entry by file/id, emits `allowed` / `creep` verdicts, and appends them to the ledger's `gates` audit log. Unmatched hunks block with a one-line reason.
-- [ ] **m3 — render the negotiation.** `negplan render` prints a readable veto/allow summary (counts + per-item lines); the inline y/n override panel writes `overridden: true` back into the ledger, moving vetoed items into `will_implement`.
-- [ ] **Future.** Cross-agent portability (Cursor / Codex read the same markdown); weekly "what my agent wanted to do (and I vetoed)" share artifact.
+- Diff-hunk gating and the interactive veto/override renderer are not implemented. Their commands print roadmap text and may exit zero; do not use them as an enforcement gate.
+- Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.
+- The table parser is a focused format parser, not a complete Markdown implementation. Keep entries in the supplied table format.
 
-v0.1 is free, open-source, MIT-licensed. No paywall, no telemetry, no hosted tier.
+Milestone m2 is diff-to-ledger enforcement; m3 is the veto/allow summary and override interface. The current release provides the ledger contract first.
 
-<h2><img src="https://api.iconify.design/tabler:license.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> License</h2>
+## License and contributions
 
-MIT — see [LICENSE](./LICENSE). Issues and PRs are welcome on the [issue tracker](https://github.com/SuperMarioYL/negplan/issues).
-
-<p align="center"><sub><a href="./LICENSE">MIT</a> © 2026 SuperMarioYL</sub></p>
+See [LICENSE](./LICENSE). When reporting an issue, include a minimal input, the command, and the observed output.

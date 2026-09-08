@@ -1,0 +1,82 @@
+{
+  "name": "negplan",
+  "tagline": "Write down the work you are deliberately leaving out.",
+  "architecture": {
+    "title": "Inside negplan",
+    "nodes": [
+      {
+        "title": "Markdown template",
+        "detail": "templates/ledger.template.md"
+      },
+      {
+        "title": "Ledger parser",
+        "detail": "src/ledger.ts"
+      },
+      {
+        "title": "Schema validation",
+        "detail": "schemas/ledger.schema.json"
+      },
+      {
+        "title": "Canonical serialization",
+        "detail": "serializeLedger"
+      }
+    ],
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ]
+    ]
+  },
+  "process": {
+    "title": "From input to a useful result",
+    "steps": [
+      {
+        "title": "Read agreement",
+        "detail": "Two allowed, three excluded"
+      },
+      {
+        "title": "Validate + serialize",
+        "detail": "Schema-valid round trip"
+      },
+      {
+        "title": "Reject invalid status",
+        "detail": "Named enum error"
+      }
+    ],
+    "result": "The example has two allowed and three excluded items; its round trip validates, while status=unexpected fails."
+  },
+  "integrations": {
+    "title": "Supported input and output routes",
+    "items": [
+      {
+        "title": "Markdown + YAML",
+        "detail": "Task and scope decisions"
+      },
+      {
+        "title": "init CLI",
+        "detail": "Create a starting document"
+      },
+      {
+        "title": "validate CLI",
+        "detail": "Document-shape check"
+      },
+      {
+        "title": "TypeScript functions",
+        "detail": "Parse and serialize ledgers"
+      },
+      {
+        "title": "Agent-readable file",
+        "detail": "Manual scope agreement"
+      }
+    ]
+  }
+}

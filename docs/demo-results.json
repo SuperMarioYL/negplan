@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "source_revision": "98d2948175050b99e8116f1d05601a5dc00ed162",
+  "scope": "Offline parsing, schema validation and serialization of a complete scope ledger, including an invalid-status example; no diff enforcement is performed.",
+  "steps": [
+    {
+      "label": "Recorded run",
+      "body": "Offline parsing, schema validation and serialization of a complete scope ledger, including an invalid-status example; no diff enforcement is performed.",
+      "command": "node examples/presentation-demo.mjs",
+      "output": "{\n  \"task\": \"Build the login page\",\n  \"will_implement\": 2,\n  \"will_not_implement\": 3,\n  \"validation\": {\n    \"valid\": true,\n    \"errors\": []\n  }\n}\nroundtrip valid: true\n{\n  \"valid\": false,\n  \"errors\": [\n    \".status: must be one of drafting, negotiating, gating, done\"\n  ]\n}"
+    }
+  ]
+}
