@@ -18,8 +18,8 @@
       "zh": "把明确不做的工作写下来。"
     },
     "sub": {
-      "en": "negplan gives a coding task a portable Markdown ledger with allowed work, excluded work and the reasons for both. The current CLI creates and validates that document.",
-      "zh": "negplan 为编码任务提供可携带的 Markdown 台账，记录计划实施、明确排除的工作及原因。当前 CLI 可以创建并校验这份文档。"
+      "en": "negplan gives a coding task a portable Markdown ledger with allowed work, excluded work and the reasons for both. The CLI creates and validates that document, gates proposed diffs against the allowed work, and prints a veto/allow summary with human overrides written back.",
+      "zh": "negplan 为编码任务提供可携带的 Markdown 台账，记录计划实施、明确排除的工作及原因。CLI 可以创建并校验这份文档，对提议的 diff 按允许范围进行门禁，并输出带人工覆盖回写的否决/允许摘要。"
     },
     "href": "#quickstart"
   },
@@ -53,6 +53,16 @@
         "en": "The validator reports fields that violate the schema.",
         "zh": "校验器报告违反 schema 的字段。"
       }
+    },
+    {
+      "title": {
+        "en": "Hold scope creep at the gate",
+        "zh": "在门禁处拦住范围蔓延"
+      },
+      "body": {
+        "en": "Diff hunks that cite no allowed entry are held as creep until a human overrides.",
+        "zh": "未引用允许条目的 diff hunk 会被判为 creep 拦下，直到人工覆盖。"
+      }
     }
   ],
   "demo": {
@@ -61,16 +71,16 @@
       "zh": "运行完整示例"
     },
     "note": {
-      "en": "Node.js 22+; parse the complete example ledger, round-trip it and reject an invalid lifecycle status.",
-      "zh": "需要 Node.js 22+；解析完整台账示例，完成序列化往返，并拒绝无效生命周期状态。"
+      "en": "Node.js 22+; parse and validate the complete example ledger, gate a diff with one cited and one uncited hunk, override one veto, and render the summary.",
+      "zh": "需要 Node.js 22+；解析并校验完整台账示例，门禁一个含引用与未引用 hunk 的 diff，覆盖一个否决项，并输出摘要。"
     },
     "source": "https://github.com/SuperMarioYL/negplan/blob/main/docs/demo-results.json",
     "steps": [
       {
         "label": "Recorded run",
-        "body": "Offline parsing, schema validation and serialization of a complete scope ledger, including an invalid-status example; no diff enforcement is performed.",
+        "body": "Offline parsing, schema validation and serialization of a complete scope ledger; diff-hunk gating with one cited and one uncited hunk; one human veto override; and the veto/allow summary — the full m1+m2+m3 flow, no network or agent required.",
         "command": "node examples/presentation-demo.mjs",
-        "output": "{\n  \"task\": \"Build the login page\",\n  \"will_implement\": 2,\n  \"will_not_implement\": 3,\n  \"validation\": {\n    \"valid\": true,\n    \"errors\": []\n  }\n}\nroundtrip valid: true\n{\n  \"valid\": false,\n  \"errors\": [\n    \".status: must be one of drafting, negotiating, gating, done\"\n  ]\n}",
+        "output": "{\n  \"task\": \"Build the login page\",\n  \"will_implement\": 2,\n  \"will_not_implement\": 3,\n  \"validation\": {\n    \"valid\": true,\n    \"errors\": []\n  }\n}\nroundtrip valid: true\n{\n  \"valid\": false,\n  \"errors\": [\n    \".status: must be one of drafting, negotiating, gating, done\"\n  ]\n}\ngate verdicts: [\n  'src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)',\n  'src/cache.ts @@ -10,1 +10,2 @@ -> creep'\n]\nnegplan — Build the login page (status: negotiating)\nwill_implement: 3   will_not_implement: 3 (1 overridden)\nvetoes:\n  n1 OAuth/SSO providers — Out of scope for v0.1; plain session only [veto]\n  n2 Password reset email flow — Defer to next sprint; needs an MTA [overridden]\n  n3 Rate-limiting middleware — Land after login works; avoid premature infra [veto]\ngate verdicts: 1 allowed / 1 creep / 0 overridden\n  g1 src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)\n  g2 src/cache.ts @@ -10,1 +10,2 @@ -> creep",
         "image": "/assets/presentation/demo-0-light.svg",
         "imageDark": "/assets/presentation/demo-0-dark.svg"
       }
@@ -82,8 +92,8 @@
       "zh": "本地上手"
     },
     "body": {
-      "en": "Node.js 22+; parse the complete example ledger, round-trip it and reject an invalid lifecycle status.",
-      "zh": "需要 Node.js 22+；解析完整台账示例，完成序列化往返，并拒绝无效生命周期状态。"
+      "en": "Node.js 22+; parse and validate the complete example ledger, gate a diff with one cited and one uncited hunk, override one veto, and render the summary.",
+      "zh": "需要 Node.js 22+；解析并校验完整台账示例，门禁一个含引用与未引用 hunk 的 diff，覆盖一个否决项，并输出摘要。"
     },
     "steps": [
       {
@@ -104,8 +114,8 @@
   },
   "limitations": [
     {
-      "en": "Diff-hunk gating and the interactive veto/override renderer are not implemented. Their commands print roadmap text and may exit zero; do not use them as an enforcement gate.",
-      "zh": "diff hunk 门禁与交互式否决/覆盖界面尚未实现。对应命令打印路线图文字并可能返回零；不可将其用于强制门禁。"
+      "en": "The gate matches the will_implement entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes.",
+      "zh": "门禁按 hunk 头部引用的 will_implement 条目匹配，不理解 diff 语义，格式正确但引用错误的判定仍会通过。"
     },
     {
       "en": "Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.",
@@ -139,8 +149,8 @@
           "zh": "处理过程"
         },
         "body": {
-          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate and render are milestone placeholders.",
-          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 与 render 仍是里程碑占位。"
+          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin and records allowed/creep verdicts; render prints the veto/allow summary.",
+          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 从 stdin 读取 unified diff 并记录 allowed/creep 判定；render 输出否决/允许摘要。"
         },
         "image": {
           "light": "/assets/presentation/process-light.svg",
@@ -161,8 +171,8 @@
           "zh": "negplan 的内部流程"
         },
         "body": {
-          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate and render are milestone placeholders.",
-          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 与 render 仍是里程碑占位。"
+          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate maps each hunk to the will_implement entry its header cites; applyOverrides moves overridden vetoes into will_implement.",
+          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 将每个 hunk 映射到其头部引用的 will_implement 条目；applyOverrides 把被覆盖的否决项移入 will_implement。"
         },
         "image": {
           "light": "/assets/presentation/architecture-light.svg",
@@ -207,8 +217,8 @@
           "zh": "配置"
         },
         "body": {
-          "en": "A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates defines change_id, file, hunk, entry_id, verdict and human_override for future enforcement records. init --force overwrites an existing file; omit it to preserve an existing agreement.",
-          "zh": "台账开头包含 task、可选 agent/created_at 与 status（drafting、negotiating、gating 或 done）。will_implement 行含 id、summary、rationale；will_not_implement 还包含 overridden。gates 定义 change_id、file、hunk、entry_id、verdict、human_override，供后续门禁记录使用。init --force 会覆盖已有文件；不加时保留现有约定。"
+          "en": "A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates records change_id, file, hunk, entry_id, verdict and human_override for every hunk the gate checks. init --force overwrites an existing file; omit it to preserve an existing agreement.",
+          "zh": "台账开头包含 task、可选 agent/created_at 与 status（drafting、negotiating、gating 或 done）。will_implement 行含 id、summary、rationale；will_not_implement 还包含 overridden。gates 记录 change_id、file、hunk、entry_id、verdict、human_override，门禁检查的每个 hunk 都会追加一行。init --force 会覆盖已有文件；不加时保留现有约定。"
         }
       },
       {
@@ -220,7 +230,7 @@
           "en": "Run these commands from the repository root after installation. Replace paths for your own data.",
           "zh": "安装后在仓库根目录运行以下命令；处理自己的数据时替换相应路径。"
         },
-        "code": "node dist/src/cli.js init --task \"Add CSV export\" --output .negplan.md\n# Fill the allowed/excluded entries in .negplan.md, then:\nnode dist/src/cli.js validate --file .negplan.md\nnode dist/src/cli.js validate --file examples/example-ledger.md"
+        "code": "node dist/src/cli.js init --task \"Add CSV export\" --output .negplan.md\n# Fill the allowed/excluded entries in .negplan.md, then:\nnode dist/src/cli.js validate --file .negplan.md\n# Gate a diff: cite the will_implement entry after the @@ header\nprintf '+++ b/src/export.ts\\n@@ -1,1 +1,2 @@ satisfies w1\\n+exportCsv()' | node dist/src/cli.js gate .negplan.md\n# Veto/allow summary; override vetoes and write them back\nnode dist/src/cli.js render .negplan.md\nnode dist/src/cli.js render .negplan.md --override n2"
       }
     ]
   }
