@@ -30,7 +30,7 @@ negplan 为编码任务提供可携带的 Markdown 台账，记录计划实施�
   <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
 </picture>
 
-init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 与 render 仍是里程碑占位。
+init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 从 stdin 读取 unified diff，将每个 hunk 映射到其头部引用的 will_implement 条目，并把 allowed/creep 判定写入 gates 表；render 仍是里程碑占位。
 
 | 组件 | 职责 |
 | --- | --- |
@@ -38,6 +38,7 @@ init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章�
 | `Ledger parser` | src/ledger.ts |
 | `Schema validation` | schemas/ledger.schema.json |
 | `Canonical serialization` | serializeLedger |
+| `Diff gate` | src/gate.ts |
 
 ## 安装与快速上手
 
@@ -101,7 +102,11 @@ node dist/src/cli.js init --task "Add CSV export" --output .negplan.md
 # Fill the allowed/excluded entries in .negplan.md, then:
 node dist/src/cli.js validate --file .negplan.md
 node dist/src/cli.js validate --file examples/example-ledger.md
+# Gate a proposed diff: cite the will_implement entry after the @@ header
+printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node dist/src/cli.js gate .negplan.md
 ```
+
+`gate` 在所有 hunk 都引用了 will_implement 条目时返回 0，有 hunk 被判为 creep 时返回 1，用法或台账错误返回 2。每个 hunk 输出一行判定，并追加到台账的 gates 表。
 
 ## 配置
 
@@ -128,11 +133,11 @@ node dist/src/cli.js validate --file examples/example-ledger.md
 
 ## 限制与后续方向
 
-- diff hunk 门禁与交互式否决/覆盖界面尚未实现。对应命令打印路线图文字并可能返回零；不可将其用于强制门禁。
+- 门禁按 hunk 头部引用的 will_implement 条目匹配，不理解 diff 语义，格式正确但引用错误的判定仍会通过。交互式否决/覆盖界面（`render`）尚未实现；该命令打印路线图文字并可能返回零。
 - 校验检查文档结构，不判断计划是否合理，也不验证生成代码是否遵守约定。
 - 表格解析器只支持特定格式，不是完整 Markdown 实现；条目应沿用提供的表格格式。
 
-m2 计划实现 diff 到台账的约束，m3 计划实现否决/允许摘要与覆盖界面。当前版本先提供台账契约。
+v0.2.0 实现了 m2（diff 到台账的约束）。m3（否决/允许摘要与覆盖界面）下一步实现；当前版本提供台账契约与门禁。
 
 ## 许可与贡献
 

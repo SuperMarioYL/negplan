@@ -30,7 +30,7 @@ An exclusion is easier to discuss when it has an ID and rationale beside the req
   <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
 </picture>
 
-init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate and render are milestone placeholders.
+init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin, maps each hunk to the will_implement entry its header cites, and records allowed/creep verdicts in the gates table; render is a milestone placeholder.
 
 | Component | Responsibility |
 | --- | --- |
@@ -38,6 +38,7 @@ init expands a Markdown template. The parser reads YAML frontmatter and three ta
 | `Ledger parser` | src/ledger.ts |
 | `Schema validation` | schemas/ledger.schema.json |
 | `Canonical serialization` | serializeLedger |
+| `Diff gate` | src/gate.ts |
 
 ## Install and quickstart
 
@@ -101,7 +102,11 @@ node dist/src/cli.js init --task "Add CSV export" --output .negplan.md
 # Fill the allowed/excluded entries in .negplan.md, then:
 node dist/src/cli.js validate --file .negplan.md
 node dist/src/cli.js validate --file examples/example-ledger.md
+# Gate a proposed diff: cite the will_implement entry after the @@ header
+printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node dist/src/cli.js gate .negplan.md
 ```
+
+`gate` exits 0 when every hunk cites a `will_implement` entry, 1 when hunks are held as creep, and 2 on a usage or ledger error. Verdict lines are printed per hunk and appended to the ledger's gates table.
 
 ## Configuration
 
@@ -128,11 +133,11 @@ Choose the input and output route that matches your workflow. The local example 
 
 ## Limits and next steps
 
-- Diff-hunk gating and the interactive veto/override renderer are not implemented. Their commands print roadmap text and may exit zero; do not use them as an enforcement gate.
+- The gate matches the `will_implement` entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes. The interactive veto/override renderer (`render`) is not implemented yet; its command prints roadmap text and may exit zero.
 - Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.
 - The table parser is a focused format parser, not a complete Markdown implementation. Keep entries in the supplied table format.
 
-Milestone m2 is diff-to-ledger enforcement; m3 is the veto/allow summary and override interface. The current release provides the ledger contract first.
+v0.2.0 implements m2, diff-to-ledger enforcement. m3, the veto/allow summary and override interface, is next; the current release provides the ledger contract plus the gate.
 
 ## License and contributions
 

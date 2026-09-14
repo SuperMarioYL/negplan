@@ -12,11 +12,12 @@ import { Command } from "commander";
 import {
   parseLedger,
   validateLedger,
+  serializeLedger,
   templatePath,
   packageRoot,
   LedgerError,
 } from "./ledger.js";
-import { gateDiff } from "./gate.js";
+import { gateDiff, creepReason } from "./gate.js";
 import { renderSummary } from "./render.js";
 
 const DEFAULT_LEDGER = ".negplan.md";
@@ -31,6 +32,12 @@ function readVersion(): string {
   }
 }
 
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stdin) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 async function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: stdin, output: process.stdout });
   try {
@@ -40,9 +47,9 @@ async function prompt(question: string): Promise<string> {
   }
 }
 
-function fail(message: string): never {
+function fail(message: string, code = 1): never {
   process.stderr.write(`negplan: ${message}\n`);
-  process.exit(1);
+  process.exit(code);
 }
 
 interface InitOptions {
@@ -111,17 +118,57 @@ function runValidate(opts: ValidateOptions): void {
   process.exit(1);
 }
 
-function runGate(file?: string): void {
-  const path = file ?? DEFAULT_LEDGER;
+/** Parse + validate a ledger file, or fail with a usage-level error. */
+function loadLedger(path: string, errorCode: number): ReturnType<typeof parseLedger> {
+  if (!existsSync(path)) fail(`${path} not found — run "negplan init" first.`, errorCode);
+  let ledger: ReturnType<typeof parseLedger>;
   try {
-    if (!existsSync(path)) fail(`${path} not found — run "negplan init" first.`);
-    const ledger = parseLedger(readFileSync(path, "utf8"));
-    gateDiff(ledger, ""); // m2 stub — throws
+    ledger = parseLedger(readFileSync(path, "utf8"));
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    process.stdout.write(`negplan: ${msg}\n`);
-    process.exit(0);
+    if (e instanceof LedgerError) fail(`${path}: ${e.message}`, errorCode);
+    throw e;
   }
+  const { valid, errors } = validateLedger(ledger);
+  if (!valid) fail(`${path} failed validation (the gate refuses an invalid ledger):\n  ${errors.join("\n  ")}`, errorCode);
+  return ledger;
+}
+
+/**
+ * Gate a unified diff (stdin) against the ledger's will_implement entries.
+ * Exit codes: 0 = every hunk allowed (or no hunks), 1 = hunks held as creep,
+ * 2 = usage or ledger error.
+ */
+async function runGate(file: string): Promise<void> {
+  const path = file ?? DEFAULT_LEDGER;
+  if (stdin.isTTY) {
+    fail("no diff on stdin — pipe a unified diff, e.g. `git diff | negplan gate .negplan.md`", 2);
+  }
+  const diff = await readStdin();
+  const ledger = loadLedger(path, 2);
+  const entries = gateDiff(ledger, diff);
+  if (entries.length === 0) {
+    process.stdout.write("negplan: no hunks found in the diff — nothing to gate.\n");
+    return;
+  }
+  ledger.gates = [...(ledger.gates ?? []), ...entries];
+  writeFileSync(path, serializeLedger(ledger), "utf8");
+
+  let creep = 0;
+  for (const e of entries) {
+    if (e.verdict === "allowed") {
+      process.stdout.write(`${e.change_id} ${e.file} ${e.hunk} -> allowed (${e.entry_id})\n`);
+    } else {
+      creep++;
+      process.stdout.write(`${e.change_id} ${e.file} ${e.hunk} -> creep (${creepReason(e)})\n`);
+    }
+  }
+  if (creep > 0) {
+    process.stdout.write(
+      `negplan: ${entries.length - creep} allowed, ${creep} held as creep — add a will_implement entry for the held hunks (or veto them) and re-gate.\n`,
+    );
+    process.exit(1);
+  }
+  process.stdout.write(`negplan: ${entries.length} hunk${entries.length === 1 ? "" : "s"} allowed.\n`);
 }
 
 function runRender(file?: string): void {
@@ -161,7 +208,7 @@ program
 
 program
   .command("gate")
-  .description("Gate a diff's hunks against allowed ledger entries (milestone m2).")
+  .description("Gate a unified diff on stdin against the ledger's will_implement entries; hunks citing no entry are held as creep (exit 1).")
   .argument("[file]", "ledger file", DEFAULT_LEDGER)
   .action(runGate);
 
