@@ -11,7 +11,7 @@
 
 **Write down the work you are deliberately leaving out.**
 
-negplan gives a coding task a portable Markdown ledger with allowed work, excluded work and the reasons for both. The current CLI creates and validates that document.
+negplan gives a coding task a portable Markdown ledger with allowed work, excluded work and the reasons for both. The CLI creates and validates that document, gates proposed diffs against the allowed work, and prints a veto/allow summary with human overrides written back.
 
 ## Why use it
 
@@ -30,7 +30,7 @@ An exclusion is easier to discuss when it has an ID and rationale beside the req
   <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
 </picture>
 
-init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin, maps each hunk to the will_implement entry its header cites, and records allowed/creep verdicts in the gates table; render is a milestone placeholder.
+init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin, maps each hunk to the will_implement entry its header cites, and records allowed/creep verdicts in the gates table. render prints the veto/allow summary, and --override writes the human's answers back into the ledger.
 
 | Component | Responsibility |
 | --- | --- |
@@ -39,6 +39,7 @@ init expands a Markdown template. The parser reads YAML frontmatter and three ta
 | `Schema validation` | schemas/ledger.schema.json |
 | `Canonical serialization` | serializeLedger |
 | `Diff gate` | src/gate.ts |
+| `Veto/allow summary` | src/render.ts |
 
 ## Install and quickstart
 
@@ -108,6 +109,15 @@ printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node 
 
 `gate` exits 0 when every hunk cites a `will_implement` entry, 1 when hunks are held as creep, and 2 on a usage or ledger error. Verdict lines are printed per hunk and appended to the ledger's gates table.
 
+```bash
+# Print the veto/allow summary (the shareable artifact)
+node dist/src/cli.js render .negplan.md
+# Override vetoes the human answered "y" to; writes the ledger back
+node dist/src/cli.js render .negplan.md --override n2
+```
+
+`render --override` marks each listed veto `overridden: true` and moves its intent into `will_implement` as a new entry citing the veto it came from.
+
 ## Configuration
 
 A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates defines change_id, file, hunk, entry_id, verdict and human_override for future enforcement records. init --force overwrites an existing file; omit it to preserve an existing agreement.
@@ -128,16 +138,18 @@ Choose the input and output route that matches your workflow. The local example 
 | Markdown + YAML | Task and scope decisions |
 | init CLI | Create a starting document |
 | validate CLI | Document-shape check |
+| gate CLI | Hold uncited diff hunks as creep |
+| render CLI | Veto/allow summary + override write-back |
 | TypeScript functions | Parse and serialize ledgers |
 | Agent-readable file | Manual scope agreement |
 
 ## Limits and next steps
 
-- The gate matches the `will_implement` entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes. The interactive veto/override renderer (`render`) is not implemented yet; its command prints roadmap text and may exit zero.
+- The gate matches the `will_implement` entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes.
 - Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.
 - The table parser is a focused format parser, not a complete Markdown implementation. Keep entries in the supplied table format.
 
-v0.2.0 implements m2, diff-to-ledger enforcement. m3, the veto/allow summary and override interface, is next; the current release provides the ledger contract plus the gate.
+v0.2.0 completes the original roadmap: the ledger contract (m1), diff-to-ledger enforcement (m2) and the veto/allow summary with override write-back (m3) all work locally against the portable Markdown ledger.
 
 ## License and contributions
 

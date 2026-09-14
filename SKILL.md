@@ -99,9 +99,16 @@ item:
 > - n2 Password reset email flow — defer to next sprint
 > ...
 
-For each `y`, set `overridden: true` in the ledger and move the item's intent
-into `will_implement`. Set `status: negotiating` while this is open. Do **not**
-propose code until the user has answered (or explicitly said "none").
+For each `y`, persist the override and move the item's intent into
+`will_implement`:
+
+```bash
+npx negplan render --override n2
+```
+
+That marks the item `overridden: true` and appends a `will_implement` entry
+citing the veto it came from. Set `status: negotiating` while this is open. Do
+**not** propose code until the user has answered (or explicitly said "none").
 
 ### 4. Propose diffs that each cite an entry
 
@@ -133,11 +140,9 @@ When done, summarize what was allowed vs held:
 npx negplan render
 ```
 
-> Note: the m1 release ships `init` + `validate` fully, and `gate` (hunk-level
-> enforcement against the ledger, milestone m2) is implemented as of v0.2.0 —
-> pipe the proposed diff on stdin as shown above. `render` (the readable
-> veto/allow summary + override panel, milestone m3) lands next; until then,
-> print both tables inline and summarize the vetoes yourself.
+The summary lists every veto with its state (`[veto]` / `[overridden]`) and
+the gate verdicts recorded in the ledger — this is the shareable artifact:
+"everything the agent wanted to do that the human vetoed."
 
 ## Always validate before finishing
 
@@ -157,5 +162,5 @@ unknown frontmatter key.
 - It is **not** post-hoc logging. The ledger is drafted **before** code, so the
   scope negotiation happens upstream of `git diff`, not as a pruning session
   afterward.
-- It does **not** gate at the AST level. v0.1 gates at the line/hunk level — a
+- It does **not** gate at the AST level. negplan gates at the line/hunk level — a
   hunk's file path and cited entry are the unit of enforcement.

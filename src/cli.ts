@@ -18,7 +18,7 @@ import {
   LedgerError,
 } from "./ledger.js";
 import { gateDiff, creepReason } from "./gate.js";
-import { renderSummary } from "./render.js";
+import { renderSummary, applyOverrides } from "./render.js";
 
 const DEFAULT_LEDGER = ".negplan.md";
 const VERSION = readVersion();
@@ -171,17 +171,39 @@ async function runGate(file: string): Promise<void> {
   process.stdout.write(`negplan: ${entries.length} hunk${entries.length === 1 ? "" : "s"} allowed.\n`);
 }
 
-function runRender(file?: string): void {
+interface RenderOptions {
+  override?: string;
+}
+
+/**
+ * Print the veto/allow summary; with --override, write the human's veto
+ * overrides back into the ledger first (overridden items move into
+ * will_implement).
+ */
+async function runRender(file: string, opts: RenderOptions): Promise<void> {
   const path = file ?? DEFAULT_LEDGER;
-  try {
-    if (!existsSync(path)) fail(`${path} not found — run "negplan init" first.`);
-    const ledger = parseLedger(readFileSync(path, "utf8"));
-    process.stdout.write(renderSummary(ledger) + "\n"); // m3 stub — throws
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    process.stdout.write(`negplan: ${msg}\n`);
-    process.exit(0);
+  const ledger = loadLedger(path, 1);
+  if (opts.override !== undefined) {
+    const ids = opts.override.split(",").map((s) => s.trim()).filter((s) => s !== "");
+    if (ids.length === 0) {
+      fail(`--override needs at least one will_not_implement id, e.g. --override n1,n2`);
+    }
+    let result;
+    try {
+      result = applyOverrides(ledger, ids);
+    } catch (e) {
+      fail(e instanceof Error ? e.message : String(e));
+    }
+    writeFileSync(path, serializeLedger(result.ledger), "utf8");
+    const note =
+      result.already.length > 0
+        ? ` (already overridden: ${result.already.join(", ")})`
+        : "";
+    process.stdout.write(
+      `negplan: overrode ${result.applied.join(", ")}${note} — moved into will_implement.\n`,
+    );
   }
+  process.stdout.write(renderSummary(ledger) + "\n");
 }
 
 const program = new Command();
@@ -214,8 +236,9 @@ program
 
 program
   .command("render")
-  .description("Print a veto/allow summary + override panel (milestone m3).")
+  .description("Print the veto/allow summary; --override n1,n2 writes human overrides back into the ledger.")
   .argument("[file]", "ledger file", DEFAULT_LEDGER)
+  .option("--override <ids>", "comma-separated will_not_implement ids the human overrode")
   .action(runRender);
 
 program.parseAsync().catch((e) => {
