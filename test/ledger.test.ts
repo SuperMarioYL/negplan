@@ -133,3 +133,72 @@ test("validateLedger accepts a gate entry with null entry_id and null override",
 test("parseLedger throws on a document without frontmatter", () => {
   assert.throws(() => parseLedger("just some prose\nno ledger here"), LedgerError);
 });
+
+test("parseLedger honors escaped pipes in table cells", () => {
+  const text = [
+    "---",
+    'task: "t"',
+    "status: drafting",
+    "---",
+    "",
+    "## will_implement",
+    "",
+    "| id | summary | rationale |",
+    "| --- | --- | --- |",
+    "| w1 | Use A \\| B | Core \\| reason |",
+    "",
+  ].join("\n");
+  const ledger = parseLedger(text);
+  assert.deepEqual(ledger.will_implement[0], {
+    id: "w1",
+    summary: "Use A | B",
+    rationale: "Core | reason",
+  });
+});
+
+test("serializeLedger escapes pipes and round-trips pipe-bearing cells losslessly", () => {
+  const text = parseLedger(
+    [
+      "---",
+      'task: "t"',
+      "status: gating",
+      "---",
+      "",
+      "## will_implement",
+      "",
+      "| id | summary | rationale |",
+      "| --- | --- | --- |",
+      "| w1 | Add A\\|B switch | Keep both \\| C branches |",
+      "",
+    ].join("\n"),
+  );
+  assert.equal(text.will_implement[0].summary, "Add A|B switch");
+  assert.equal(text.will_implement[0].rationale, "Keep both | C branches");
+  const out = serializeLedger(text);
+  // the pipe inside each cell is escaped on write
+  assert.ok(out.includes("Add A\\|B switch"));
+  assert.ok(out.includes("Keep both \\| C branches"));
+  // and the round trip is lossless
+  assert.deepEqual(parseLedger(out), text);
+});
+
+test("unescaped pipes still split columns — escape them (\\|) to keep a literal pipe", () => {
+  // a row with more columns than the section header keeps only the first N
+  // cells; escape the pipe if it is meant to be cell content
+  const ledger = parseLedger(
+    [
+      "---",
+      'task: "t"',
+      "status: drafting",
+      "---",
+      "",
+      "## will_implement",
+      "",
+      "| id | summary | rationale |",
+      "| --- | --- | --- |",
+      "| w1 | Use A | B |",
+      "",
+    ].join("\n"),
+  );
+  assert.deepEqual(ledger.will_implement[0], { id: "w1", summary: "Use A", rationale: "B" });
+});

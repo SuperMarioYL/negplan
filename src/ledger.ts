@@ -136,11 +136,17 @@ function isTableRow(line: string): boolean {
   return line.trim() !== "" && line.includes("|");
 }
 
+/**
+ * Split a table row into cells. Markdown's escaped pipe (\|) is honored: the
+ * row splits only on unescaped | and each \| unescapes to a literal |, so
+ * pipe-bearing cell content survives parsing (and round-trips through
+ * serializeLedger, which escapes | on write).
+ */
 function parseRow(line: string): string[] {
-  const raw = line.split("|");
+  const raw = line.split(/(?<!\\)\|/);
   if (raw.length && raw[0].trim() === "") raw.shift();
   if (raw.length && raw[raw.length - 1].trim() === "") raw.pop();
-  return raw.map((c) => c.trim());
+  return raw.map((c) => c.trim().replace(/\\\|/g, "|"));
 }
 
 function parseBool(s: string | undefined): boolean {
@@ -283,7 +289,8 @@ export function serializeLedger(ledger: Ledger): string {
     const sep = header.map(() => "---").join(" | ");
     const lines = [`| ${header.join(" | ")} |`, `| ${sep} |`];
     for (const r of rows) {
-      const cells = header.map((_, idx) => r[idx] ?? "");
+      // escape | so a pipe inside a cell cannot split the row on re-parse
+      const cells = header.map((_, idx) => (r[idx] ?? "").replaceAll("|", "\\|"));
       lines.push(`| ${cells.join(" | ")} |`);
     }
     return lines.join("\n");
