@@ -52,7 +52,7 @@ npm ci
 npm run build
 ```
 
-需要 Node.js 22+；解析完整台账示例，完成序列化往返，并拒绝无效生命周期状态。
+需要 Node.js 22+；解析并校验完整台账示例，门禁一个含引用与未引用 hunk 的 diff，覆盖一个否决项，并输出摘要。
 
 ```bash
 node examples/presentation-demo.mjs
@@ -67,7 +67,7 @@ node examples/presentation-demo.mjs
   <img src="./assets/presentation/process-light.svg" width="960" alt="Process diagram">
 </picture>
 
-The example has two allowed and three excluded items; its round trip validates, while status=unexpected fails.
+示例台账包含两个允许项与三个排除项；往返校验通过，status=unexpected 被拒绝。随后门禁将一个未引用条目的 hunk 判为 creep，人工覆盖一个否决项，最后 render 输出完整摘要。
 
 ```text
 {
@@ -86,6 +86,19 @@ roundtrip valid: true
     ".status: must be one of drafting, negotiating, gating, done"
   ]
 }
+gate verdicts: [
+  'src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)',
+  'src/cache.ts @@ -10,1 +10,2 @@ -> creep'
+]
+negplan — Build the login page (status: negotiating)
+will_implement: 3   will_not_implement: 3 (1 overridden)
+vetoes:
+  n1 OAuth/SSO providers — Out of scope for v0.1; plain session only [veto]
+  n2 Password reset email flow — Defer to next sprint; needs an MTA [overridden]
+  n3 Rate-limiting middleware — Land after login works; avoid premature infra [veto]
+gate verdicts: 1 allowed / 1 creep / 0 overridden
+  g1 src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)
+  g2 src/cache.ts @@ -10,1 +10,2 @@ -> creep
 ```
 
 完整命令与输出保存在 [docs/demo-results.json](./docs/demo-results.json). 输入和复现代码均随仓提供。

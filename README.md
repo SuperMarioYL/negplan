@@ -52,7 +52,7 @@ npm ci
 npm run build
 ```
 
-Node.js 22+; parse the complete example ledger, round-trip it and reject an invalid lifecycle status.
+Node.js 22+; parse and validate the complete example ledger, gate a diff with one cited and one uncited hunk, override one veto, and render the summary.
 
 ```bash
 node examples/presentation-demo.mjs
@@ -67,7 +67,7 @@ node examples/presentation-demo.mjs
   <img src="./assets/presentation/process-light.svg" width="960" alt="Process diagram">
 </picture>
 
-The example has two allowed and three excluded items; its round trip validates, while status=unexpected fails.
+The example has two allowed and three excluded items; its round trip validates, while status=unexpected fails. The gate then holds one uncited hunk as creep, the human overrides one veto, and the render summarizes everything.
 
 ```text
 {
@@ -86,6 +86,19 @@ roundtrip valid: true
     ".status: must be one of drafting, negotiating, gating, done"
   ]
 }
+gate verdicts: [
+  'src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)',
+  'src/cache.ts @@ -10,1 +10,2 @@ -> creep'
+]
+negplan — Build the login page (status: negotiating)
+will_implement: 3   will_not_implement: 3 (1 overridden)
+vetoes:
+  n1 OAuth/SSO providers — Out of scope for v0.1; plain session only [veto]
+  n2 Password reset email flow — Defer to next sprint; needs an MTA [overridden]
+  n3 Rate-limiting middleware — Land after login works; avoid premature infra [veto]
+gate verdicts: 1 allowed / 1 creep / 0 overridden
+  g1 src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)
+  g2 src/cache.ts @@ -10,1 +10,2 @@ -> creep
 ```
 
 The complete command and output are recorded in [docs/demo-results.json](./docs/demo-results.json). Inputs and reproduction code are included in the repository.

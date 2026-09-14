@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "source_revision": "98d2948175050b99e8116f1d05601a5dc00ed162",
-  "scope": "Offline parsing, schema validation and serialization of a complete scope ledger, including an invalid-status example; no diff enforcement is performed.",
+  "source_revision": "2acbaba445e4268c61ec5d2a13018e7ac04a767a",
+  "scope": "Offline parsing, schema validation and serialization of a complete scope ledger; diff-hunk gating with one cited and one uncited hunk; one human veto override; and the veto/allow summary — the full m1+m2+m3 flow, no network or agent required.",
   "steps": [
     {
       "label": "Recorded run",
-      "body": "Offline parsing, schema validation and serialization of a complete scope ledger, including an invalid-status example; no diff enforcement is performed.",
+      "body": "Offline parsing, schema validation and serialization of a complete scope ledger; diff-hunk gating with one cited and one uncited hunk; one human veto override; and the veto/allow summary — the full m1+m2+m3 flow, no network or agent required.",
       "command": "node examples/presentation-demo.mjs",
-      "output": "{\n  \"task\": \"Build the login page\",\n  \"will_implement\": 2,\n  \"will_not_implement\": 3,\n  \"validation\": {\n    \"valid\": true,\n    \"errors\": []\n  }\n}\nroundtrip valid: true\n{\n  \"valid\": false,\n  \"errors\": [\n    \".status: must be one of drafting, negotiating, gating, done\"\n  ]\n}"
+      "output": "{\n  \"task\": \"Build the login page\",\n  \"will_implement\": 2,\n  \"will_not_implement\": 3,\n  \"validation\": {\n    \"valid\": true,\n    \"errors\": []\n  }\n}\nroundtrip valid: true\n{\n  \"valid\": false,\n  \"errors\": [\n    \".status: must be one of drafting, negotiating, gating, done\"\n  ]\n}\ngate verdicts: [\n  'src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)',\n  'src/cache.ts @@ -10,1 +10,2 @@ -> creep'\n]\nnegplan — Build the login page (status: negotiating)\nwill_implement: 3   will_not_implement: 3 (1 overridden)\nvetoes:\n  n1 OAuth/SSO providers — Out of scope for v0.1; plain session only [veto]\n  n2 Password reset email flow — Defer to next sprint; needs an MTA [overridden]\n  n3 Rate-limiting middleware — Land after login works; avoid premature infra [veto]\ngate verdicts: 1 allowed / 1 creep / 0 overridden\n  g1 src/routes/login.ts @@ -1,1 +1,2 @@ satisfies w1 -> allowed (w1)\n  g2 src/cache.ts @@ -10,1 +10,2 @@ -> creep"
     }
   ]
 }
