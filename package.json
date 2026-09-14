@@ -1,6 +1,6 @@
 {
   "name": "negplan",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Create, parse and validate Markdown scope ledgers that record what a coding task will and will not implement, with explicit rationales.",
   "type": "module",
   "main": "dist/src/ledger.js",
