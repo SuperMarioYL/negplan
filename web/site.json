@@ -92,8 +92,8 @@
       "zh": "本地上手"
     },
     "body": {
-      "en": "Node.js 22+; parse and validate the complete example ledger, gate a diff with one cited and one uncited hunk, override one veto, and render the summary.",
-      "zh": "需要 Node.js 22+；解析并校验完整台账示例，门禁一个含引用与未引用 hunk 的 diff，覆盖一个否决项，并输出摘要。"
+      "en": "Node.js 22+; parse and validate the complete example ledger, gate a diff with one cited and one uncited hunk, override one veto or force a held hunk through with negplan override, and render the summary.",
+      "zh": "需要 Node.js 22+；解析并校验完整台账示例，门禁一个含引用与未引用 hunk 的 diff，覆盖一个否决项或用 negplan override 放行被扣留的 hunk，并输出摘要。"
     },
     "steps": [
       {
@@ -149,8 +149,8 @@
           "zh": "处理过程"
         },
         "body": {
-          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin and records allowed/creep verdicts; render prints the veto/allow summary.",
-          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 从 stdin 读取 unified diff 并记录 allowed/creep 判定；render 输出否决/允许摘要。"
+          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate reads a unified diff on stdin and records allowed/creep verdicts; render prints the veto/allow summary, and override forces a held creep hunk through when the human accepts it.",
+          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 从 stdin 读取 unified diff 并记录 allowed/creep 判定；render 输出否决/允许摘要，override 在人工接受时放行被扣留的 creep hunk。"
         },
         "image": {
           "light": "/assets/presentation/process-light.svg",
@@ -171,8 +171,8 @@
           "zh": "negplan 的内部流程"
         },
         "body": {
-          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate maps each hunk to the will_implement entry its header cites; applyOverrides moves overridden vetoes into will_implement.",
-          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 将每个 hunk 映射到其头部引用的 will_implement 条目；applyOverrides 把被覆盖的否决项移入 will_implement。"
+          "en": "init expands a Markdown template. The parser reads YAML frontmatter and three table sections into a typed ledger; a focused validator checks the shipped schema, and serializeLedger writes the canonical form. gate maps each hunk to the will_implement entry its header cites; applyOverrides moves overridden vetoes into will_implement; overrideGateVerdict marks a held hunk overridden with human_override: true.",
+          "zh": "init 展开 Markdown 模板；解析器将 YAML frontmatter 与三个表格章节读成类型化台账，专用校验器检查随仓 schema，serializeLedger 写出规范格式。gate 将每个 hunk 映射到其头部引用的 will_implement 条目；applyOverrides 把被覆盖的否决项移入 will_implement；overrideGateVerdict 将被扣留的 hunk 标记为 overridden 并写入 human_override: true。"
         },
         "image": {
           "light": "/assets/presentation/architecture-light.svg",
