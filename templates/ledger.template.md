@@ -1,7 +1,7 @@
 ---
-task: "{{TASK}}"
-agent: "{{AGENT}}"
-created_at: "{{CREATED_AT}}"
+task: {{TASK}}
+agent: {{AGENT}}
+created_at: {{CREATED_AT}}
 status: drafting
 ---
 

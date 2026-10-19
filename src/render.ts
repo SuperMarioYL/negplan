@@ -103,3 +103,35 @@ export function applyOverrides(ledger: Ledger, ids: string[]): OverrideResult {
 
   return { ledger: { ...ledger, will_implement: willImpl, will_not_implement: willNot }, applied, already };
 }
+
+/**
+ * Force a held creep hunk through: mark the gates row <changeId> verdict
+ * "overridden" with human_override: true — the human's answer to a hunk the
+ * gate held (schemas define overridden = "human forced a creep hunk through").
+ * Only a creep row can be overridden; an unknown or already-decided change id
+ * throws with the held creep ids listed.
+ */
+export function overrideGateVerdict(ledger: Ledger, changeId: string): Ledger {
+  const gates = ledger.gates ?? [];
+  const row = gates.find((g) => g.change_id === changeId);
+  const held = gates
+    .filter((g) => g.verdict === "creep")
+    .map((g) => g.change_id)
+    .join(", ");
+  if (!row) {
+    throw new Error(
+      `unknown gates change_id: ${changeId} — held creep ids: ${held || "(none)"}`,
+    );
+  }
+  if (row.verdict !== "creep") {
+    throw new Error(
+      `${changeId} is ${row.verdict}, not creep — only a held creep hunk can be overridden — held creep ids: ${held || "(none)"}`,
+    );
+  }
+  return {
+    ...ledger,
+    gates: gates.map((g) =>
+      g === row ? { ...g, verdict: "overridden" as const, human_override: true } : g,
+    ),
+  };
+}

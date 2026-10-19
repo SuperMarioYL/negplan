@@ -132,6 +132,18 @@ Exit 0 means every hunk cited a `will_implement` entry; exit 1 means some
 hunks were held as creep (the command prints one verdict line per hunk and
 appends them to the ledger's gates table).
 
+If the human decides a held creep hunk is actually wanted, do not hand-edit
+the ledger — record the decision:
+
+```bash
+npx negplan override g2
+```
+
+That marks the gates row `verdict: overridden` with `human_override: true`,
+keeping the audit log truthful. Only a `creep` row can be forced through; an
+uncited hunk the human does NOT want stays held (or becomes a new candidate
+veto).
+
 ### 5. Render the summary
 
 When done, summarize what was allowed vs held:

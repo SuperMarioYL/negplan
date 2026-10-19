@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { packageRoot } from "../src/ledger.js";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 test("package.json, the VERSION file and the CHANGELOG agree on the version", () => {
   const pkg = JSON.parse(readFileSync(join(packageRoot(), "package.json"), "utf8"));

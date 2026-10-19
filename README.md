@@ -127,13 +127,15 @@ printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node 
 node dist/src/cli.js render .negplan.md
 # Override vetoes the human answered "y" to; writes the ledger back
 node dist/src/cli.js render .negplan.md --override n2
+# Force a held creep hunk through (the human accepts the out-of-scope change)
+node dist/src/cli.js override g2 .negplan.md
 ```
 
-`render --override` marks each listed veto `overridden: true` and moves its intent into `will_implement` as a new entry citing the veto it came from.
+`render --override` marks each listed veto `overridden: true` and moves its intent into `will_implement` as a new entry citing the veto it came from. `override <change_id>` marks a held creep row in the gates table `overridden` with `human_override: true`, recording the human's decision in the audit log; only a `creep` row can be forced through.
 
 ## Configuration
 
-A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates defines change_id, file, hunk, entry_id, verdict and human_override for future enforcement records. init --force overwrites an existing file; omit it to preserve an existing agreement.
+A ledger starts with task, optional agent/created_at and status (drafting, negotiating, gating or done). will_implement rows contain id, summary and rationale; will_not_implement adds overridden. gates defines change_id, file, hunk, entry_id, verdict and human_override — the audit trail the gate appends to and `override` updates. init --force overwrites an existing file; omit it to preserve an existing agreement.
 
 ## Integrations and responsibilities
 
@@ -162,7 +164,7 @@ Choose the input and output route that matches your workflow. The local example 
 - Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.
 - The table parser is a focused format parser, not a complete Markdown implementation. Keep entries in the supplied table format.
 
-v0.2.0 completes the original roadmap: the ledger contract (m1), diff-to-ledger enforcement (m2) and the veto/allow summary with override write-back (m3) all work locally against the portable Markdown ledger.
+v0.2.0 completes the original roadmap: the ledger contract (m1), diff-to-ledger enforcement (m2) and the veto/allow summary with override write-back (m3) all work locally against the portable Markdown ledger. v0.3.0 fixes the init frontmatter quoting and the stale post-override summary, and adds `negplan override` so a held creep hunk can be forced through by the human instead of hand-editing the ledger.
 
 ## License and contributions
 

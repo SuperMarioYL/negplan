@@ -270,7 +270,13 @@ export function parseLedger(content: string): Ledger {
 
 // --- serialization -----------------------------------------------------------
 
-function yamlQuote(s: string): string {
+/**
+ * Quote a string as a YAML double-quoted scalar. The single owner of YAML
+ * scalar quoting: anything interpolated into a ledger's frontmatter (init's
+ * task/agent, serializeLedger's fields) goes through this, so values
+ * containing quotes or backslashes cannot break the document.
+ */
+export function yamlQuote(s: string): string {
   return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 

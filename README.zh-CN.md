@@ -127,13 +127,15 @@ printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node 
 node dist/src/cli.js render .negplan.md
 # Override vetoes the human answered "y" to; writes the ledger back
 node dist/src/cli.js render .negplan.md --override n2
+# Force a held creep hunk through (the human accepts the out-of-scope change)
+node dist/src/cli.js override g2 .negplan.md
 ```
 
-`render --override` 将列出的否决项标记为 `overridden: true`，并把其意图作为新条目移入 will_implement，rationale 注明来源否决项。
+`render --override` 将列出的否决项标记为 `overridden: true`，并把其意图作为新条目移入 will_implement，rationale 注明来源否决项。`override <change_id>` 将 gates 表中被扣留的 creep 行标记为 `overridden` 并写入 `human_override: true`，把人的决定记录进审计日志；只有 `creep` 行可以放行。
 
 ## 配置
 
-台账开头包含 task、可选 agent/created_at 与 status（drafting、negotiating、gating 或 done）。will_implement 行含 id、summary、rationale；will_not_implement 还包含 overridden。gates 定义 change_id、file、hunk、entry_id、verdict、human_override，供后续门禁记录使用。init --force 会覆盖已有文件；不加时保留现有约定。
+台账开头包含 task、可选 agent/created_at 与 status（drafting、negotiating、gating 或 done）。will_implement 行含 id、summary、rationale；will_not_implement 还包含 overridden。gates 定义 change_id、file、hunk、entry_id、verdict、human_override——这是门禁追加、`override` 更新的审计轨迹。init --force 会覆盖已有文件；不加时保留现有约定。
 
 ## 集成与职责分工
 
@@ -162,7 +164,7 @@ node dist/src/cli.js render .negplan.md --override n2
 - 校验检查文档结构，不判断计划是否合理，也不验证生成代码是否遵守约定。
 - 表格解析器只支持特定格式，不是完整 Markdown 实现；条目应沿用提供的表格格式。
 
-v0.2.0 完成了原始路线图：台账契约（m1）、diff 到台账的约束（m2）、带覆盖回写的否决/允许摘要（m3）均可在本地对可携带 Markdown 台账使用。
+v0.2.0 完成了原始路线图：台账契约（m1）、diff 到台账的约束（m2）、带覆盖回写的否决/允许摘要（m3）均可在本地对可携带 Markdown 台账使用。v0.3.0 修复了 init frontmatter 的引号处理与覆盖后摘要过期的问题，并新增 `negplan override`，被扣留的 creep hunk 可由人放行，无需手改台账。
 
 ## 许可与贡献
 

@@ -15,10 +15,11 @@ import {
   serializeLedger,
   templatePath,
   packageRoot,
+  yamlQuote,
   LedgerError,
 } from "./ledger.js";
 import { gateDiff, creepReason } from "./gate.js";
-import { renderSummary, applyOverrides } from "./render.js";
+import { renderSummary, applyOverrides, overrideGateVerdict } from "./render.js";
 
 const DEFAULT_LEDGER = ".negplan.md";
 const VERSION = readVersion();
@@ -81,10 +82,12 @@ async function runInit(opts: InitOptions): Promise<void> {
   const createdAt = new Date().toISOString();
 
   const template = readFileSync(templatePath(), "utf8");
+  // the template's placeholders are bare YAML scalars; quoting is owned by
+  // yamlQuote so task/agent text containing quotes or backslashes stays valid
   const content = template
-    .replaceAll("{{TASK}}", task)
-    .replaceAll("{{AGENT}}", agent)
-    .replaceAll("{{CREATED_AT}}", createdAt);
+    .replaceAll("{{TASK}}", yamlQuote(task))
+    .replaceAll("{{AGENT}}", yamlQuote(agent))
+    .replaceAll("{{CREATED_AT}}", yamlQuote(createdAt));
 
   writeFileSync(outPath, content, "utf8");
   process.stdout.write(`negplan: wrote ${outPath} (task: "${task}")\n`);
@@ -182,7 +185,7 @@ interface RenderOptions {
  */
 async function runRender(file: string, opts: RenderOptions): Promise<void> {
   const path = file ?? DEFAULT_LEDGER;
-  const ledger = loadLedger(path, 1);
+  let ledger = loadLedger(path, 1);
   if (opts.override !== undefined) {
     const ids = opts.override.split(",").map((s) => s.trim()).filter((s) => s !== "");
     if (ids.length === 0) {
@@ -202,11 +205,34 @@ async function runRender(file: string, opts: RenderOptions): Promise<void> {
     process.stdout.write(
       `negplan: overrode ${result.applied.join(", ")}${note} — moved into will_implement.\n`,
     );
+    // the printed summary must reflect what was just persisted, not the pre-override state
+    ledger = result.ledger;
   }
   process.stdout.write(renderSummary(ledger) + "\n");
 }
 
 const program = new Command();
+
+/**
+ * Force a held creep hunk through: mark the gates row verdict "overridden"
+ * with human_override: true and write the ledger back — the human's answer to
+ * a hunk the gate held.
+ */
+function runOverride(changeId: string, file: string): void {
+  const path = file ?? DEFAULT_LEDGER;
+  const ledger = loadLedger(path, 1);
+  let updated;
+  try {
+    updated = overrideGateVerdict(ledger, changeId);
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e));
+  }
+  writeFileSync(path, serializeLedger(updated), "utf8");
+  process.stdout.write(
+    `negplan: ${changeId} overridden (human_override: true) — held hunk forced through.\n`,
+  );
+  process.stdout.write(renderSummary(updated) + "\n");
+}
 
 program
   .name("negplan")
@@ -240,6 +266,13 @@ program
   .argument("[file]", "ledger file", DEFAULT_LEDGER)
   .option("--override <ids>", "comma-separated will_not_implement ids the human overrode")
   .action(runRender);
+
+program
+  .command("override")
+  .description("Force a held creep hunk through: mark gates row <change_id> verdict overridden with human_override: true.")
+  .argument("<change_id>", "gates change id to override, e.g. g2")
+  .argument("[file]", "ledger file", DEFAULT_LEDGER)
+  .action(runOverride);
 
 program.parseAsync().catch((e) => {
   fail(e instanceof Error ? e.message : String(e));

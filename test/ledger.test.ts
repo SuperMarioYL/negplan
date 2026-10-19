@@ -2,19 +2,23 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import {
   parseLedger,
   serializeLedger,
   validateLedger,
   packageRoot,
   templatePath,
+  yamlQuote,
   LedgerError,
 } from "../src/ledger.js";
 
 const EXAMPLE = join(packageRoot(), "examples", "example-ledger.md");
 const exampleText = readFileSync(EXAMPLE, "utf8");
+const CLI = join(packageRoot(), "dist", "src", "cli.js");
 
 test("parseLedger parses the hand-written example", () => {
   const ledger = parseLedger(exampleText);
@@ -47,15 +51,46 @@ test("serializeLedger round-trips: parse(serialize(parsed)) deep-equals parsed",
 
 test("a fresh init ledger (empty tables) validates green", () => {
   const template = readFileSync(templatePath(), "utf8")
-    .replaceAll("{{TASK}}", "Ship the dashboard")
-    .replaceAll("{{AGENT}}", "claude-code")
-    .replaceAll("{{CREATED_AT}}", "2026-08-28T10:00:00Z");
+    .replaceAll("{{TASK}}", yamlQuote("Ship the dashboard"))
+    .replaceAll("{{AGENT}}", yamlQuote("claude-code"))
+    .replaceAll("{{CREATED_AT}}", yamlQuote("2026-08-28T10:00:00Z"));
   const ledger = parseLedger(template);
   assert.equal(ledger.will_implement.length, 0);
   assert.equal(ledger.will_not_implement.length, 0);
   assert.equal(ledger.gates.length, 0);
   const { valid, errors } = validateLedger(ledger);
   assert.ok(valid, errors.join("; "));
+});
+
+test("CLI init: a task containing double quotes produces a ledger that validates", () => {
+  // regression: the template used to pre-quote the placeholders, so a raw
+  // substitution broke the frontmatter and validate failed on the fresh file
+  const dir = mkdtempSync(join(tmpdir(), "negplan-init-"));
+  const out = join(dir, ".negplan.md");
+  const task = 'build the "login" page';
+  const r = spawnSync(process.execPath, [CLI, "init", "--task", task, "--output", out], {
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0, `stderr: ${r.stderr}`);
+  const ledger = parseLedger(readFileSync(out, "utf8"));
+  assert.equal(ledger.task, task);
+  const { valid, errors } = validateLedger(ledger);
+  assert.ok(valid, errors.join("; "));
+});
+
+test("CLI init: a task containing a backslash round-trips", () => {
+  const dir = mkdtempSync(join(tmpdir(), "negplan-init-"));
+  const out = join(dir, ".negplan.md");
+  const task = "cache path C:\\tmp\\cache";
+  const r = spawnSync(process.execPath, [CLI, "init", "--task", task, "--output", out], {
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0, `stderr: ${r.stderr}`);
+  const ledger = parseLedger(readFileSync(out, "utf8"));
+  assert.equal(ledger.task, task);
+  // and the serialized form stays valid too
+  const { valid } = validateLedger(parseLedger(serializeLedger(ledger)));
+  assert.ok(valid);
 });
 
 test("validateLedger rejects an id that violates the w<n> / n<n> / g<n> pattern", () => {
