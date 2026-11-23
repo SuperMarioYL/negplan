@@ -6,6 +6,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-24
+
+### Fixed
+
+- `negplan gate` reads a citation only in a citation position: the `w<n>` id
+  must follow `satisfies`, `implements`, `cites` or `for`, or be the first thing
+  after the `@@` header. Git appends the enclosing function signature to every
+  hunk header by default, so a bare `w<n>` token there — `@@ -12,3 +12,4 @@
+  def scale(w1, w2):` — used to be read as a citation and the hunk was reported
+  `allowed` (exit 0) although nothing was cited. Such a hunk is now held as
+  creep; `negplan override <change_id>` forces it through when a human accepts
+  it.
+- `negplan gate` records the file the hunk actually touches for real `git diff`
+  output: a path containing a space no longer keeps the tab git appends to the
+  `+++` line, and a non-ASCII path (written by git in its quoted `"\346..."`
+  form) is decoded instead of being attributed to the previous file.
+- `negplan gate`, `negplan render --override` and `negplan override` write the
+  ledger back without discarding prose: only the three managed tables and the
+  frontmatter are replaced, so context notes, comments and sections you added
+  to the `.negplan.md` file survive a verdict.
+- A ledger that cannot be written is reported as exit 2 (usage/ledger error)
+  with the file left unchanged, instead of exit 1 — the code that means "hunks
+  held as creep" and would send the caller looking for a verdict that was never
+  recorded.
+- `negplan init` escapes line breaks in `--task` and `--agent`: a task
+  containing a newline or tab used to produce frontmatter that no command could
+  parse, while `init` reported success and exited 0.
+
 ## [0.3.0] - 2026-10-20
 
 ### Fixed
@@ -58,7 +86,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `schemas/ledger.schema.json` validator, the ledger template, and the
   Claude Code skill that drafts the ledger on a build request.
 
-[Unreleased]: https://github.com/SuperMarioYL/negplan/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/SuperMarioYL/negplan/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/SuperMarioYL/negplan/releases/tag/v0.4.0
 [0.3.0]: https://github.com/SuperMarioYL/negplan/releases/tag/v0.3.0
 [0.2.0]: https://github.com/SuperMarioYL/negplan/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SuperMarioYL/negplan/releases/tag/v0.1.0

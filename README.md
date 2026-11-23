@@ -120,7 +120,9 @@ node dist/src/cli.js validate --file examples/example-ledger.md
 printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node dist/src/cli.js gate .negplan.md
 ```
 
-`gate` exits 0 when every hunk cites a `will_implement` entry, 1 when hunks are held as creep, and 2 on a usage or ledger error. Verdict lines are printed per hunk and appended to the ledger's gates table.
+`gate` exits 0 when every hunk cites a `will_implement` entry, 1 when hunks are held as creep, and 2 on a usage or ledger error (including a ledger that cannot be written). Verdict lines are printed per hunk and appended to the ledger's gates table; nothing else in the file is rewritten.
+
+A citation is explicit: the id follows `satisfies`, `implements`, `cites` or `for`, or stands first after the `@@` header. Git appends the enclosing function signature to every hunk header by default, so a `w<n>` token inside that text (`@@ -12,3 +12,4 @@ def scale(w1, w2):`) is not a citation and the hunk is held as creep.
 
 ```bash
 # Print the veto/allow summary (the shareable artifact)
@@ -163,8 +165,9 @@ Choose the input and output route that matches your workflow. The local example 
 - The gate matches the `will_implement` entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes.
 - Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.
 - The table parser is a focused format parser, not a complete Markdown implementation. Keep entries in the supplied table format.
+- Every gate run is its own audit event: re-gating the same diff after `negplan override` appends a fresh `creep` row and exits 1 again. Override the new row, or add the entry to `will_implement` and re-gate.
 
-v0.2.0 completes the original roadmap: the ledger contract (m1), diff-to-ledger enforcement (m2) and the veto/allow summary with override write-back (m3) all work locally against the portable Markdown ledger. v0.3.0 fixes the init frontmatter quoting and the stale post-override summary, and adds `negplan override` so a held creep hunk can be forced through by the human instead of hand-editing the ledger.
+v0.2.0 completes the original roadmap: the ledger contract (m1), diff-to-ledger enforcement (m2) and the veto/allow summary with override write-back (m3) all work locally against the portable Markdown ledger. v0.3.0 fixes the init frontmatter quoting and the stale post-override summary, and adds `negplan override` so a held creep hunk can be forced through by the human instead of hand-editing the ledger. v0.4.0 hardens the gate and the ledger file itself: citations are read only in a citation position (git's function context can no longer approve an uncited hunk), real `git diff` paths with spaces or non-ASCII characters are recorded correctly, verdict write-back keeps the prose you added to the ledger, an unwritable ledger exits 2 instead of the creep code, and `init` escapes line breaks in the task so the file it writes always parses.
 
 ## License and contributions
 

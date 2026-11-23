@@ -273,66 +273,157 @@ export function parseLedger(content: string): Ledger {
 /**
  * Quote a string as a YAML double-quoted scalar. The single owner of YAML
  * scalar quoting: anything interpolated into a ledger's frontmatter (init's
- * task/agent, serializeLedger's fields) goes through this, so values
- * containing quotes or backslashes cannot break the document.
+ * task/agent, serializeLedger's fields) goes through this, so values containing
+ * quotes, backslashes or line breaks cannot break the document.
  */
 export function yamlQuote(s: string): string {
-  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  return `"${s
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t")}"`;
 }
 
-/** Render a Ledger back into canonical .negplan.md markdown. */
-export function serializeLedger(ledger: Ledger): string {
+/** The ledger-owned frontmatter scalars, in canonical order. */
+function frontmatterLines(ledger: Ledger): string[] {
   const fm: string[] = [`task: ${yamlQuote(ledger.task ?? "")}`];
   if (ledger.agent !== undefined) fm.push(`agent: ${yamlQuote(ledger.agent)}`);
   if (ledger.created_at !== undefined) fm.push(`created_at: ${yamlQuote(ledger.created_at)}`);
   fm.push(`status: ${ledger.status ?? "drafting"}`);
+  return fm;
+}
 
-  const willImpl = ledger.will_implement ?? [];
-  const willNot = ledger.will_not_implement ?? [];
-  const gates = ledger.gates ?? [];
+/** Render one markdown table (header, separator, rows), escaping `|`. */
+function tableLines(header: string[], rows: string[][]): string[] {
+  const sep = header.map(() => "---").join(" | ");
+  const lines = [`| ${header.join(" | ")} |`, `| ${sep} |`];
+  for (const r of rows) {
+    // escape | so a pipe inside a cell cannot split the row on re-parse
+    const cells = header.map((_, idx) => (r[idx] ?? "").replaceAll("|", "\\|"));
+    lines.push(`| ${cells.join(" | ")} |`);
+  }
+  return lines;
+}
 
-  const table = (header: string[], rows: string[][]): string => {
-    const sep = header.map(() => "---").join(" | ");
-    const lines = [`| ${header.join(" | ")} |`, `| ${sep} |`];
-    for (const r of rows) {
-      // escape | so a pipe inside a cell cannot split the row on re-parse
-      const cells = header.map((_, idx) => (r[idx] ?? "").replaceAll("|", "\\|"));
-      lines.push(`| ${cells.join(" | ")} |`);
-    }
-    return lines.join("\n");
-  };
+const TABLE_HEADERS: Record<SectionKey, string[]> = {
+  will_implement: ["id", "summary", "rationale"],
+  will_not_implement: ["id", "summary", "rationale", "overridden"],
+  gates: ["change_id", "file", "hunk", "entry_id", "verdict", "human_override"],
+};
 
-  return [
-    "---",
-    ...fm,
-    "---",
-    "",
-    "## will_implement",
-    "",
-    table(["id", "summary", "rationale"], willImpl.map((e) => [e.id, e.summary, e.rationale])),
-    "",
-    "## will_not_implement",
-    "",
-    table(
-      ["id", "summary", "rationale", "overridden"],
-      willNot.map((e) => [e.id, e.summary, e.rationale, String(e.overridden)]),
-    ),
-    "",
-    "## gates",
-    "",
-    table(
-      ["change_id", "file", "hunk", "entry_id", "verdict", "human_override"],
-      gates.map((g) => [
+const SECTION_HEADINGS: Record<SectionKey, string> = {
+  will_implement: "## will_implement",
+  will_not_implement: "## will_not_implement",
+  gates: "## gates",
+};
+
+function sectionRows(ledger: Ledger, section: SectionKey): string[][] {
+  switch (section) {
+    case "will_implement":
+      return (ledger.will_implement ?? []).map((e) => [e.id, e.summary, e.rationale]);
+    case "will_not_implement":
+      return (ledger.will_not_implement ?? []).map((e) => [
+        e.id,
+        e.summary,
+        e.rationale,
+        String(e.overridden),
+      ]);
+    case "gates":
+      return (ledger.gates ?? []).map((g) => [
         g.change_id,
         g.file,
         g.hunk,
         g.entry_id ?? "null",
         g.verdict,
         g.human_override === null ? "null" : String(g.human_override),
-      ]),
-    ),
+      ]);
+  }
+}
+
+/** Render a Ledger back into canonical .negplan.md markdown. */
+export function serializeLedger(ledger: Ledger): string {
+  const table = (section: SectionKey): string =>
+    tableLines(TABLE_HEADERS[section], sectionRows(ledger, section)).join("\n");
+
+  return [
+    "---",
+    ...frontmatterLines(ledger),
+    "---",
+    "",
+    "## will_implement",
+    "",
+    table("will_implement"),
+    "",
+    "## will_not_implement",
+    "",
+    table("will_not_implement"),
+    "",
+    "## gates",
+    "",
+    table("gates"),
     "",
   ].join("\n");
+}
+
+/**
+ * Write a ledger back into `original`, preserving everything the human put
+ * outside the managed blocks. The four frontmatter scalars this module owns
+ * and the three table bodies are replaced; headings, prose, comments and
+ * sections this format does not manage survive byte-for-byte, and a managed
+ * section missing from `original` is appended.
+ *
+ * The ledger is a hand-edited document (init tells the user to open it and fill
+ * the lists), so a verdict write must not discard what was typed there.
+ */
+export function mergeLedgerDocument(original: string, ledger: Ledger): string {
+  const fm = FRONTMATTER_RE.exec(original);
+  if (!fm) return serializeLedger(ledger);
+
+  const lines = fm[2].split(/\r?\n/);
+  const out: string[] = [];
+  const emitted = new Set<SectionKey>();
+  let i = 0;
+  while (i < lines.length) {
+    const heading = /^##\s+(.+?)\s*$/.exec(lines[i]);
+    const section = heading ? sectionFor(heading[1]) : null;
+    if (!section) {
+      out.push(lines[i]);
+      i++;
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+    if (emitted.has(section)) continue; // a repeated heading: leave its body alone
+    emitted.add(section);
+    let replaced = false;
+    while (i < lines.length && !/^##\s+/.test(lines[i])) {
+      const tableStart =
+        !replaced && isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1]);
+      if (tableStart) {
+        i += 2;
+        while (i < lines.length && isTableRow(lines[i]) && !isSeparator(lines[i])) i++;
+        out.push(...tableLines(TABLE_HEADERS[section], sectionRows(ledger, section)));
+        replaced = true;
+        continue;
+      }
+      out.push(lines[i]);
+      i++;
+    }
+    if (!replaced) {
+      out.push("", ...tableLines(TABLE_HEADERS[section], sectionRows(ledger, section)));
+    }
+  }
+
+  for (const section of SECTIONS) {
+    if (emitted.has(section)) continue;
+    out.push("", SECTION_HEADINGS[section], "", ...tableLines(TABLE_HEADERS[section], sectionRows(ledger, section)));
+  }
+
+  while (out.length > 0 && out[0].trim() === "") out.shift();
+  while (out.length > 0 && out[out.length - 1].trim() === "") out.pop();
+
+  return ["---", ...frontmatterLines(ledger), "---", "", ...out, ""].join("\n");
 }
 
 // --- validation (a focused JSON-Schema subset) ------------------------------

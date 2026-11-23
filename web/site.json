@@ -114,8 +114,8 @@
   },
   "limitations": [
     {
-      "en": "The gate matches the will_implement entry cited in each hunk header — it does not understand a diff's semantics, so a well-formed but wrong citation passes.",
-      "zh": "门禁按 hunk 头部引用的 will_implement 条目匹配，不理解 diff 语义，格式正确但引用错误的判定仍会通过。"
+      "en": "The gate matches the will_implement entry cited in each hunk header — the id must follow `satisfies`, `implements`, `cites` or `for`, or start the header — and it does not understand a diff's semantics, so a well-formed but wrong citation still passes.",
+      "zh": "门禁按 hunk 头部引用的 will_implement 条目匹配——条目 id 需跟在 `satisfies`、`implements`、`cites` 或 `for` 之后，或位于头部开头——但不理解 diff 语义，格式正确但引用错误的判定仍会通过。"
     },
     {
       "en": "Validation checks document structure, not whether planned work is appropriate or whether generated code follows it.",

@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import {
   parseLedger,
   serializeLedger,
+  mergeLedgerDocument,
   validateLedger,
   packageRoot,
   templatePath,
@@ -236,4 +237,98 @@ test("unescaped pipes still split columns — escape them (\\|) to keep a litera
     ].join("\n"),
   );
   assert.deepEqual(ledger.will_implement[0], { id: "w1", summary: "Use A", rationale: "B" });
+});
+
+test("CLI init: a task containing a newline round-trips", () => {
+  // regression: yamlQuote escaped quotes and backslashes but not line breaks,
+  // so init exited 0 having written frontmatter the parser rejects
+  const dir = mkdtempSync(join(tmpdir(), "negplan-init-"));
+  const out = join(dir, ".negplan.md");
+  const task = "line one\nline two\tafter a tab";
+  const r = spawnSync(process.execPath, [CLI, "init", "--task", task, "--output", out], {
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0, `stderr: ${r.stderr}`);
+  const ledger = parseLedger(readFileSync(out, "utf8"));
+  assert.equal(ledger.task, task);
+  const { valid, errors } = validateLedger(ledger);
+  assert.ok(valid, errors.join("; "));
+});
+
+test("mergeLedgerDocument keeps prose and replaces only the managed tables", () => {
+  const original = [
+    "---",
+    'task: "Build the login page"',
+    "agent: claude-code",
+    'created_at: "2026-08-28T10:00:00Z"',
+    "status: negotiating",
+    "---",
+    "",
+    "## Context",
+    "",
+    "Sessions only; SSO was ruled out with the human.",
+    "",
+    "## will_implement",
+    "",
+    "| id | summary | rationale |",
+    "| --- | --- | --- |",
+    "| w1 | Add POST /login route | Core requirement of this task |",
+    "",
+    "## will_not_implement",
+    "",
+    "| id | summary | rationale | overridden |",
+    "| --- | --- | --- | --- |",
+    "| n1 | OAuth/SSO providers | Out of scope for v0.1 | false |",
+    "",
+    "## gates",
+    "",
+    "| change_id | file | hunk | entry_id | verdict | human_override |",
+    "| --- | --- | --- | --- | --- | --- |",
+    "",
+    "## Open questions",
+    "",
+    "- Should the session cookie be HttpOnly?",
+    "",
+  ].join("\n");
+  const ledger = parseLedger(original);
+  ledger.gates = [
+    { change_id: "g1", file: "src/a.ts", hunk: "@@ -1,1 +1,2 @@ satisfies w1", entry_id: "w1", verdict: "allowed", human_override: null },
+  ];
+
+  const merged = mergeLedgerDocument(original, ledger);
+  const reparsed = parseLedger(merged);
+
+  // the verdict landed in the gates table ...
+  assert.deepEqual(reparsed.gates, ledger.gates);
+  // ... and every line the human wrote is still there, in order
+  assert.ok(merged.includes("## Context\n\nSessions only; SSO was ruled out with the human.\n"));
+  assert.ok(merged.includes("## Open questions\n\n- Should the session cookie be HttpOnly?\n"));
+  assert.ok(validateLedger(reparsed).valid);
+  // the untouched entries round-trip
+  assert.deepEqual(reparsed.will_implement, ledger.will_implement);
+  assert.deepEqual(reparsed.will_not_implement, ledger.will_not_implement);
+});
+
+test("mergeLedgerDocument appends a managed section the document is missing", () => {
+  const original = [
+    "---",
+    'task: "t"',
+    "agent: claude-code",
+    'created_at: "2026-08-28T10:00:00Z"',
+    "status: drafting",
+    "---",
+    "",
+    "## will_implement",
+    "",
+    "| id | summary | rationale |",
+    "| --- | --- | --- |",
+    "| w1 | a | b |",
+    "",
+  ].join("\n");
+  const merged = mergeLedgerDocument(original, parseLedger(original));
+  const reparsed = parseLedger(merged);
+  assert.equal(reparsed.will_implement.length, 1);
+  assert.deepEqual(reparsed.will_not_implement, []);
+  assert.deepEqual(reparsed.gates, []);
+  assert.ok(validateLedger(reparsed).valid);
 });

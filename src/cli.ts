@@ -12,11 +12,12 @@ import { Command } from "commander";
 import {
   parseLedger,
   validateLedger,
-  serializeLedger,
   templatePath,
   packageRoot,
   yamlQuote,
+  mergeLedgerDocument,
   LedgerError,
+  type Ledger,
 } from "./ledger.js";
 import { gateDiff, creepReason } from "./gate.js";
 import { renderSummary, applyOverrides, overrideGateVerdict } from "./render.js";
@@ -121,19 +122,47 @@ function runValidate(opts: ValidateOptions): void {
   process.exit(1);
 }
 
+/** A validated ledger together with the document it was read from. */
+interface LoadedLedger {
+  ledger: Ledger;
+  /** The on-disk text — the write-back base that keeps the human's prose. */
+  text: string;
+}
+
 /** Parse + validate a ledger file, or fail with a usage-level error. */
-function loadLedger(path: string, errorCode: number): ReturnType<typeof parseLedger> {
+function loadLedger(path: string, errorCode: number): LoadedLedger {
   if (!existsSync(path)) fail(`${path} not found — run "negplan init" first.`, errorCode);
-  let ledger: ReturnType<typeof parseLedger>;
+  const text = readFileSync(path, "utf8");
+  let ledger: Ledger;
   try {
-    ledger = parseLedger(readFileSync(path, "utf8"));
+    ledger = parseLedger(text);
   } catch (e) {
     if (e instanceof LedgerError) fail(`${path}: ${e.message}`, errorCode);
     throw e;
   }
   const { valid, errors } = validateLedger(ledger);
   if (!valid) fail(`${path} failed validation (the gate refuses an invalid ledger):\n  ${errors.join("\n  ")}`, errorCode);
-  return ledger;
+  return { ledger, text };
+}
+
+/**
+ * Persist a ledger back into the document it was read from: only the managed
+ * tables and frontmatter change, so prose the human added survives. A ledger
+ * that cannot be written is a usage/ledger error (exit 2) — never the exit-1
+ * "hunks held as creep" code, which promises a verdict that was not recorded.
+ */
+function saveLedger(path: string, text: string, ledger: Ledger): void {
+  let merged: string;
+  try {
+    merged = mergeLedgerDocument(text, ledger);
+  } catch (e) {
+    fail(`could not serialize ${path}: ${e instanceof Error ? e.message : String(e)}`, 2);
+  }
+  try {
+    writeFileSync(path, merged, "utf8");
+  } catch (e) {
+    fail(`could not write ${path}: ${e instanceof Error ? e.message : String(e)}`, 2);
+  }
 }
 
 /**
@@ -147,14 +176,14 @@ async function runGate(file: string): Promise<void> {
     fail("no diff on stdin — pipe a unified diff, e.g. `git diff | negplan gate .negplan.md`", 2);
   }
   const diff = await readStdin();
-  const ledger = loadLedger(path, 2);
+  const { ledger, text } = loadLedger(path, 2);
   const entries = gateDiff(ledger, diff);
   if (entries.length === 0) {
     process.stdout.write("negplan: no hunks found in the diff — nothing to gate.\n");
     return;
   }
   ledger.gates = [...(ledger.gates ?? []), ...entries];
-  writeFileSync(path, serializeLedger(ledger), "utf8");
+  saveLedger(path, text, ledger);
 
   let creep = 0;
   for (const e of entries) {
@@ -185,7 +214,7 @@ interface RenderOptions {
  */
 async function runRender(file: string, opts: RenderOptions): Promise<void> {
   const path = file ?? DEFAULT_LEDGER;
-  let ledger = loadLedger(path, 1);
+  let { ledger, text } = loadLedger(path, 1);
   if (opts.override !== undefined) {
     const ids = opts.override.split(",").map((s) => s.trim()).filter((s) => s !== "");
     if (ids.length === 0) {
@@ -197,7 +226,7 @@ async function runRender(file: string, opts: RenderOptions): Promise<void> {
     } catch (e) {
       fail(e instanceof Error ? e.message : String(e));
     }
-    writeFileSync(path, serializeLedger(result.ledger), "utf8");
+    saveLedger(path, text, result.ledger);
     const note =
       result.already.length > 0
         ? ` (already overridden: ${result.already.join(", ")})`
@@ -220,14 +249,14 @@ const program = new Command();
  */
 function runOverride(changeId: string, file: string): void {
   const path = file ?? DEFAULT_LEDGER;
-  const ledger = loadLedger(path, 1);
+  const { ledger, text } = loadLedger(path, 1);
   let updated;
   try {
     updated = overrideGateVerdict(ledger, changeId);
   } catch (e) {
     fail(e instanceof Error ? e.message : String(e));
   }
-  writeFileSync(path, serializeLedger(updated), "utf8");
+  saveLedger(path, text, updated);
   process.stdout.write(
     `negplan: ${changeId} overridden (human_override: true) — held hunk forced through.\n`,
   );

@@ -120,7 +120,9 @@ node dist/src/cli.js validate --file examples/example-ledger.md
 printf '+++ b/src/export.ts\n@@ -1,1 +1,2 @@ satisfies w1\n+exportCsv()' | node dist/src/cli.js gate .negplan.md
 ```
 
-`gate` 在所有 hunk 都引用了 will_implement 条目时返回 0，有 hunk 被判为 creep 时返回 1，用法或台账错误返回 2。每个 hunk 输出一行判定，并追加到台账的 gates 表。
+`gate` 在所有 hunk 都引用了 will_implement 条目时返回 0，有 hunk 被判为 creep 时返回 1，用法或台账错误（包括台账无法写入）返回 2。每个 hunk 输出一行判定，并追加到台账的 gates 表；文件中的其他内容不会被重写。
+
+引用必须显式：条目 id 跟在 `satisfies`、`implements`、`cites` 或 `for` 之后，或直接位于 `@@` 头部之后的开头。git 默认会在每个 hunk 头部追加所在函数签名，因此那段文本里的 `w<n>`（例如 `@@ -12,3 +12,4 @@ def scale(w1, w2):`）不算引用，该 hunk 会被判为 creep。
 
 ```bash
 # Print the veto/allow summary (the shareable artifact)
@@ -163,8 +165,9 @@ node dist/src/cli.js override g2 .negplan.md
 - 门禁按 hunk 头部引用的 will_implement 条目匹配，不理解 diff 语义，格式正确但引用错误的判定仍会通过。
 - 校验检查文档结构，不判断计划是否合理，也不验证生成代码是否遵守约定。
 - 表格解析器只支持特定格式，不是完整 Markdown 实现；条目应沿用提供的表格格式。
+- 每次门禁都是一条独立审计记录：`negplan override` 之后再次门禁同一 diff 会新增一行 `creep` 并再次返回 1。放行新的那一行，或把该工作加入 `will_implement` 后重新门禁。
 
-v0.2.0 完成了原始路线图：台账契约（m1）、diff 到台账的约束（m2）、带覆盖回写的否决/允许摘要（m3）均可在本地对可携带 Markdown 台账使用。v0.3.0 修复了 init frontmatter 的引号处理与覆盖后摘要过期的问题，并新增 `negplan override`，被扣留的 creep hunk 可由人放行，无需手改台账。
+v0.2.0 完成了原始路线图：台账契约（m1）、diff 到台账的约束（m2）、带覆盖回写的否决/允许摘要（m3）均可在本地对可携带 Markdown 台账使用。v0.3.0 修复了 init frontmatter 的引号处理与覆盖后摘要过期的问题，并新增 `negplan override`，被扣留的 creep hunk 可由人放行，无需手改台账。v0.4.0 加固了门禁与台账文件本身：只在引用位置读取条目 id（git 的函数上下文不再能放行未引用的 hunk）、正确记录含空格或非 ASCII 字符的真实 `git diff` 路径、回写判定时保留你为台账补充的说明文字、台账无法写入时返回 2 而非 creep 的退出码，并让 init 对任务中的换行做转义，保证写出的文件总能被解析。
 
 ## 许可与贡献
 

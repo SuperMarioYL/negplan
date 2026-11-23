@@ -120,6 +120,13 @@ entry. Cite the entry id in the hunk header's trailing text (after the second
 @@ -1,1 +1,2 @@ satisfies w1
 ```
 
+A citation is an explicit act: the gate reads the id only when it follows a
+citation word (`satisfies`, `implements`, `cites`, `for`) or when it is the
+first thing after the `@@` header (`@@ -1,1 +1,2 @@ w1`). Git appends the
+enclosing function signature to every hunk header by default, so an identifier
+named `w1` in that text — `@@ -12,3 +12,4 @@ def scale(w1, w2):` — is **not**
+a citation; such a hunk is held as creep.
+
 A hunk that touches something with no matching entry is scope creep — do not
 write it; surface it as a new candidate veto instead. Before proposing the
 diff for real, check it:
